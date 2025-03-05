@@ -21,7 +21,9 @@
          rule
          table
          verb
-         doc-element?)
+         doc-element?
+         centering
+         lstlisting)
 
 (define doc-element? string?)
 
@@ -136,11 +138,15 @@
 ;; wrap something in a schemedisplay environment
 (define racketdisplay (env-thing "schemedisplay"))
 
-;; verbatim
-(define verbatim (env-thing "verbatim"))
+(define-syntax (make-samename-env-thing stx)
+  (syntax-case stx ()
+    [(_ id)
+     #`(define id (env-thing #,(symbol->string (syntax-e #'id))))]))
 
-;; lilypond
-(define lilypond (env-thing "lilypond"))
+(make-samename-env-thing verbatim)
+(make-samename-env-thing lilypond)
+(make-samename-env-thing centering)
+(make-samename-env-thing lstlisting)
 
 ;; a generic wrapper
 (define (make-wrapper kwd)
