@@ -35,7 +35,8 @@
                        #:extra-pkgs (listof string?)
                        #:extra-page boolean?
                        #:title-page-break boolean?
-                       #:print-problem-name boolean?)
+                       #:print-problem-name boolean?
+                       #:pkg-config-strs (listof string?))
                       
                       boolean?)]
   #;[assemble-questions (-> (listof prob-pair?)
@@ -91,12 +92,13 @@
                        #:extra-pkgs [extra-pkgs '()]
                        #:extra-page [extra-page? #f]
                        #:title-page-break [title-page-break? #t]
-                       #:print-problem-name [print-problem-name? #f])
+                       #:print-problem-name [print-problem-name? #f]
+                       #:pkg-config-strs [package-config-strs '()])
   ;; just check to make sure this doesn't signal an error:
   (question-names (filter prob-pair? questions))
   (define target-path (build-path file-path (~a file-stem ".tex")))
   (display-to-file 
-   (string-append (front-page title blurb extra-pkgs key?)
+   (string-append (front-page title blurb extra-pkgs package-config-strs key?)
                   (cond [title-page-break? "\n\\newpage\n"]
                         [else ""])
                   (assemble-questions questions print-problem-name?)
@@ -273,11 +275,11 @@ a problem that makes a question unsolvable or seriously broken.
 ;; given the number of the exam and a string for the current quarter, produce a front page.
 ;; ultimately, it would be nice to turn TeX macros into racket
 ;; procedures.
-(define (front-page title blurb extra-pkgs key?)
+(define (front-page title blurb extra-pkgs package-config-strs key?)
   @sa{\documentclass[11pt]{article}
 \usepackage[margin=2.5cm,right=3.5cm]{geometry}
-\usepackage{slatex}
-@(pkgs extra-pkgs)
+@(pkgs (cons "slatex" extra-pkgs))
+@(apply string-append (add-between package-config-strs "\n\n"))
 
 \defschememathescape{$}  %$
 \setkeyword{define-struct define-type}
@@ -327,7 +329,7 @@ Name:  & \rule{200pt}{.1pt} \\[.5cm]
 \end{tabular}
 \end{center}
 
-@blurb \hfil\begin{minipage}[t]{4.5cm}
+@blurb %\hfil\begin{minipage}[t]{4.5cm}
 
 @;{ \begin{tabular}{|c|l|@"@"/r|}
 \hline
@@ -337,7 +339,8 @@ Name:  & \rule{200pt}{.1pt} \\[.5cm]
 3 & & 15 \\ \hline
 {\bf Total} & \relax & 30 \\ \hline
 \end{tabular}
-}\end{minipage}
+}
+%\end{minipage}
 
 \vfill\thispagestyle{empty}
 
