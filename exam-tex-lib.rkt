@@ -23,7 +23,8 @@
          verb
          doc-element?
          centering
-         lstlisting)
+         lstlisting
+         listings-package-setup)
 
 (define doc-element? string?)
 
@@ -345,3 +346,17 @@ Name:  & \rule{200pt}{.1pt} \\[.5cm]
 \vfill\thispagestyle{empty}
 
 })
+
+(define listings-package-setup
+  #<<|
+\lstset{
+    aboveskip=0.5em,
+    belowskip=0.25em,
+    xleftmargin=1.75em,
+    numbers=left,
+    numberstyle=\scriptsize\ttfamily,
+    basicstyle=\normalsize\ttfamily,
+    frame=L
+}
+|
+)
