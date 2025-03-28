@@ -42,7 +42,7 @@
                       boolean?)]
   #;[assemble-questions (-> (listof prob-pair?)
                           string?)]
-  [question-names (-> (listof (or/c prob-pair? newpage?))
+  [question-names (-> (listof (or/c prob-pair? string?))
                       (listof symbol?))]
   [newpage string?]
   [problem (->* () #:rest (listof doc-element?) (-> real? doc-element?))]))
@@ -62,7 +62,7 @@
 ;; of the problem names
 (define (question-names quiz-list)
   (for/list ([question (in-list quiz-list)]
-             #:when (not (newpage? question)))
+             #:when (not (string? question)))
     (problem-pair-name question)))
 
 
