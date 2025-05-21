@@ -204,7 +204,9 @@
                     items
                     (list "\\seti")))]
     ['alpha-ordered
-     (apply (env-thing "enumerate") #:options "label=(\\alph*)" items)]))
+     (apply (env-thing "enumerate") #:options "label=(\\alph*)" items)]
+    ['cap-alpha-ordered
+     (apply (env-thing "enumerate") #:options "label=(\\Alph*)" items)]))
 
 ;; item: faking the scribble 'item'
 (define (item . conts)
