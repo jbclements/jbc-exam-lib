@@ -40,6 +40,11 @@
                        #:pkg-config-strs (listof string?))
                       
                       boolean?)]
+  [instructions-sheet (->* (string? doc-element? path? string?)
+                      (#:extra-pkgs (listof string?)
+                       #:pkg-config-strs (listof string?))
+                      
+                      boolean?)]
   #;[assemble-questions (-> (listof prob-pair?)
                           string?)]
   [question-names (-> (listof (or/c prob-pair? string?))
@@ -86,6 +91,19 @@
 (define (newpage? s)
   (or (equal? s newpage)
       (equal? s "\\newpage")))
+
+(define (instructions-sheet title blurb file-path file-stem
+                            #:extra-pkgs [extra-pkgs '()]
+                            #:pkg-config-strs [package-config-strs '()])
+  ;; just check to make sure this doesn't signal an error:
+  (define target-path (build-path file-path (~a file-stem ".tex")))
+  (display-to-file 
+   (string-append (front-page title blurb extra-pkgs package-config-strs #f
+                              #:name #f)
+                  @string-append{\end{document}})
+   target-path
+   #:exists 'truncate)
+  (pdf-slatex (path->string target-path)))
 
 ;; given the pieces, assemble and pdf-slatex the file
 (define (assemble-test title blurb questions file-path file-stem
@@ -278,7 +296,8 @@ a problem that makes a question unsolvable or seriously broken.
 ;; given the number of the exam and a string for the current quarter, produce a front page.
 ;; ultimately, it would be nice to turn TeX macros into racket
 ;; procedures.
-(define (front-page title blurb extra-pkgs package-config-strs key?)
+(define (front-page title blurb extra-pkgs package-config-strs key?
+                    #:name [name? #t])
   @sa{\documentclass[11pt]{article}
 \usepackage[margin=2.5cm,right=3.5cm]{geometry}
 @(pkgs (cons "slatex" extra-pkgs))
@@ -326,11 +345,14 @@ a problem that makes a question unsolvable or seriously broken.
 
 ~\\[2cm]
 
+@(if name?
+@sa{
 \begin{center}
 \begin{tabular}@sa|{{l@{\qquad}l}}|
 Name:  & \rule{200pt}{.1pt} \\[.5cm]
 \end{tabular}
-\end{center}
+\end{center}}
+@sa{})
 
 @blurb %\hfil\begin{minipage}[t]{4.5cm}
 
