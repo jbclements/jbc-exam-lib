@@ -121,6 +121,12 @@
                   (cond [title-page-break? "\n\\newpage\n"]
                         [else ""])
                   (assemble-questions questions print-problem-name?)
+                  "\\hrule"
+                  "\\begin{centering}
+
+\\small things below this line might not be graded...
+
+\\end{centering}"
                   (if extra-page? (string-append newpage " ~") "")
                   @string-append{\end{document}})
    target-path
