@@ -265,11 +265,11 @@
 
 ;; table... well, enough to get by. Heaven help you if 
 ;; you have an ampersand or a double-slash in there.
-(define (table cols spec lorows)
+(define (table _ spec lorows #:lines [lines? #f])
   (apply (env-thing "tabular") "{"spec"} \\hline\n"
          (append
           (for/list ([row lorows])
-            (apply sa (append (add-between row " & ") (list " \\\\\n"))))
+            (apply sa (append (add-between row " & ") (list " \\\\\n" (if lines? "\\hline \n" "")))))
           (list "\\hline\n"))))
 
 
