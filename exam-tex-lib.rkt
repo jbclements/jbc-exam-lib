@@ -1,7 +1,8 @@
 #lang at-exp racket
 
 (require racket/contract
-         slatex/slatex-wrapper)
+         slatex/slatex-wrapper
+         scramble/regexp)
 
 (provide front-page
          344-blurb
@@ -23,8 +24,11 @@
          verb
          doc-element?
          centering
+         center
          lstlisting
-         listings-package-setup)
+         listings-package-setup
+         tikz-cons-tree
+         tikz-tree)
 
 (define doc-element? string?)
 
@@ -172,7 +176,8 @@
 
 (make-samename-env-thing verbatim)
 (make-samename-env-thing lilypond)
-(make-samename-env-thing centering)
+(make-samename-env-thing centering) ;; usually don't want this...
+(make-samename-env-thing center)
 (make-samename-env-thing lstlisting)
 
 ;; a generic wrapper
@@ -251,9 +256,10 @@
           #:options "label=(\\alph*)"
           (map item items))))
 
-(require rackunit)
-(check-equal? (multichoice #f "abcv" "hh.")
-              "\\begin{multicols}{2}
+(module+ test
+  (require rackunit)
+  (check-equal? (multichoice #f "abcv" "hh.")
+                "\\begin{multicols}{2}
 \\begin{enumerate}[label=(\\alph*)]
 \\item abcv
 \\item hh.
@@ -261,7 +267,7 @@
 \\end{enumerate}
 
 \\end{multicols}
-")
+"))
 
 ;; table... well, enough to get by. Heaven help you if 
 ;; you have an ampersand or a double-slash in there.
@@ -296,8 +302,9 @@ a problem that makes a question unsolvable or seriously broken.
    (for/list ([p (in-list pkg-strs)])
      (string-append "\\usepackage{" p "}\n"))))
 
-(check-equal? (pkgs '("abc" "def"))
-              "\\usepackage{abc}\n\\usepackage{def}\n")
+(module+ test
+  (check-equal? (pkgs '("abc" "def"))
+                "\\usepackage{abc}\n\\usepackage{def}\n"))
 
 ;; given the number of the exam and a string for the current quarter, produce a front page.
 ;; ultimately, it would be nice to turn TeX macros into racket
@@ -390,3 +397,238 @@ Name:  & \rule{200pt}{.1pt} \\[.5cm]
 }
 |
 )
+
+
+;; drawing binary trees:
+
+
+(define (line-decl label1 label2)
+  (unless (regexp-match (px ^ (+ (chars alpha)) $) label1)
+    (error 'line-decl "expected labels consisting of letters, got: ~a\n" label1))
+  (unless (regexp-match (px ^ (+ (chars alpha)) $) label2)
+    (error 'line-decl "expected labels consisting of letters, got: ~a\n" label2))
+  (format "\\draw (~a) to (~a);" label1 label2))
+
+(define (tikz-node-decl type label height x content)
+  (unless (regexp-match (px ^ (+ (chars alpha)) $) label)
+    (error 'tikz-node-decl "expected label consisting of letters, got: ~a\n" label))
+  (unless (exact-integer? height)
+    (error 'tikz-node-decl "expected height that is an integer, got: ~a\n" height))
+  (unless (real? x)
+    (error 'tikz-node-decl "expected x that is a real number, got: ~a\n" x))
+  (unless (regexp-match? (px ^ (? "'") (* (chars (union digit alpha))) $) content)
+    (error 'tikz-node-decl "expected content matching specified regexp, got: ~e\n"
+           content))
+  (format "\\node[~a] (~a) at (~a,~a) {~a};" type label (~r #:precision 2 x) height
+          content))
+
+
+
+(define (cons-decl label height x)
+  (tikz-node-decl "cons" label height x ""))
+
+(define (null-decl label height x)
+  (tikz-node-decl "null" label height x ""))
+
+(define (numnode-decl label height x num)
+  (tikz-node-decl "numleaf" label height x (number->string num)))
+
+(define (symnode-decl label height x symbol)
+  (tikz-node-decl "symleaf" label height x (~v symbol)))
+
+;; given a tree of cons, empty, and numbers, return a TikZ string
+(define (cons-tree-to-tikz tree)
+  (define d (tree-depth tree))
+  (apply
+   string-append
+   (map (λ (s) (string-append s "\n"))
+        (cons-tree-to-tikz/height tree d "n" 0 8))))
+
+
+(define (cons-tree-to-tikz/height tree height label min-x max-x)
+  (define mid-x (/ (+ min-x max-x) 2))
+  (cond [(pair? tree)
+         (define left-label (string-append label "l"))
+         (define right-label (string-append label "r"))
+         (define mid-x (/ (+ min-x max-x) 2))
+         (append
+          (list
+           (cons-decl label height (/ (+ min-x max-x) 2)))
+          (cons-tree-to-tikz/height (car tree) (sub1 height) left-label min-x mid-x)
+          (cons-tree-to-tikz/height (cdr tree) (sub1 height) right-label mid-x max-x)
+          (list
+           (line-decl label left-label)
+           (line-decl label right-label)))]
+        [(null? tree)
+         (list
+          (null-decl label height mid-x))]
+        [(number? tree)
+         (list
+          (numnode-decl label height mid-x tree))]
+        [(symbol? tree)
+         (list
+          (symnode-decl label height mid-x tree))]
+        [else
+         (error 'cons-tree-to-tikz/height
+                "expected pair, null, number, or symbol, got: ~e"
+                tree)]))
+
+;; height of a tree. atoms are of height 0
+(define (tree-depth t)
+  (cond [(pair? t) (add1 (max (tree-depth (car t)) (tree-depth (cdr t))))]
+        [else 0]))
+
+(define tikz-intro
+  (apply string-append
+  @list{
+   \begin{tikzpicture}[
+         null/.style={shape=circle,draw,fill=black,inner sep=2pt},
+         cons/.style={shape=circle,draw,fill=black,inner sep=0pt},
+         numleaf/.style={},
+         symleaf/.style={}
+      ]}))
+
+(define tikz-outro
+  "\\end{tikzpicture}\n")
+
+(define (tikz-wrap content)
+  (string-append tikz-intro content tikz-outro))
+
+(define (tikz-cons-tree cons-tree)
+  (tikz-wrap (cons-tree-to-tikz cons-tree)))
+
+
+;; wow, actually I think this is a much nicer way to do this?
+
+(define a-char (char->integer #\a))
+
+;; a tikz-text is either '_ or a different symbol or a string
+
+;; a tikz-node is either a tikz-text or (cons tikz-text (listof tikz-node))
+;; the first one is just for convenience, to shorten e.g. (_ (_) (_)) to (_ _ _)
+
+;; given a name (not shown) and a tikz-node, emit the text necessary
+;; to render the tree in tikz. It appears that tikz requires nodes to have unique
+;; names, and these are generated by adding characters chosen from the set
+;; (a, b, ...) to the end of the existing name. So, if the initial name is na,
+;; and it has three children, they would be named naa, nab, and nac.
+(define (tikz-tree-node-render name node)
+  ;; this enables the abbreviation of a no-children node:
+  (define-values (text children)
+    (match node
+      [(cons text children) (values text children)]
+      [(or (? string?) (? symbol?) (? number?)) (values node '())]))
+  ;; this enables the abbreviation of " " as '_ and of "abc" as 'abc:
+  (define expanded-text
+    (match text
+      ['_ " "]
+      [(? symbol? sym) (symbol->string sym)]
+      [(? string? s) s]
+      [(? exact-integer? n) (number->string n)]
+      [other (error 'btree-node-render "unexpected value for node text: ~e" text)]))
+  (when (< 26 (length children))
+    (error "naming convention requires fewer than 26 children per node, got ~e"
+           children))
+  (format "node (~a) {\\texttt{~a}} ~a"
+          name
+          expanded-text
+          (apply
+           string-append
+           (add-between
+            (for/list ([c children]
+                       [i (in-naturals)])
+              (define sub-name (string-append name
+                                              (string
+                                               (integer->char (+ a-char i)))))
+              (format "child {~a}" (tikz-tree-node-render sub-name c)))
+            " "))))
+
+(module+ test
+  (check-equal? (tikz-tree-node-render "n" '("x"))
+                "node (n) {\\texttt{x}} ")
+  (check-equal? (tikz-tree-node-render "n" '("x" ("y") ("z")))
+                "node (n) {\\texttt{x}} child {node (na) {\\texttt{y}} } \
+child {node (nb) {\\texttt{z}} }"))
+
+(define btree-str
+  (apply
+   string-append
+   @list{
+                   \node (n) {\texttt{ }}
+                        child {node (na) {\texttt{ }}
+                            child {node (n4) {\texttt{ }}
+                                child {node (n8) {\texttt{ }}}
+                                child {node (n9) {\texttt{ }}}}
+                            child {node (n5) {\texttt{ }}
+                                child {node (n10) {\texttt{ }}
+                                    child {node (n20) {\texttt{ }}
+                                        child {node (n40) {\texttt{ }}}
+                                        child {node (n41) {\texttt{ }}}}
+                                    child {node (n21) {\texttt{ }}}}
+                                child {node (n11) {\texttt{ }}}}}
+                        child {node (nb) {\texttt{ }}
+                            child {node (n6) {\texttt{ }}}
+                            child {node (n7) {\texttt{ }}}};
+}))
+
+(define btree-example
+  (apply
+   string-append
+@list{
+                \begin{tikzpicture}[
+                    level distance=1cm, thick, draw=black, text=black,
+                    every node/.style={circle, draw=black, minimum width=0.75cm},
+                    level 1/.style={sibling distance=8cm},
+                    level 2/.style={sibling distance=4cm},
+                    level 3/.style={sibling distance=2cm},
+                    level 4/.style={sibling distance=1cm},
+                    level 5/.style={sibling distance=0.75cm}]
+
+                    @btree-str
+                \end{tikzpicture}
+}))
+
+(define (tikz-tree btree-sketch)
+  (apply
+   string-append
+@list{
+                \begin{tikzpicture}[
+                    level distance=1cm, thick, draw=black, text=black,
+                    every node/.style={circle, draw=black, minimum width=0.75cm},
+                    level 1/.style={sibling distance=8cm},
+                    level 2/.style={sibling distance=4cm},
+                    level 3/.style={sibling distance=2cm},
+                    level 4/.style={sibling distance=1cm},
+                    level 5/.style={sibling distance=0.75cm}]
+
+                    \@(tikz-tree-node-render "n" btree-sketch);
+                \end{tikzpicture}
+}))
+
+
+
+
+
+(module+ test
+  (require rackunit)
+  (check-equal? (tree-depth '(4 (2))) 3)
+
+  (check-equal? (cons-tree-to-tikz '(4 (2)))
+                #<<|
+\node[cons] (n) at (4,3) {};
+\node[numleaf] (nl) at (2,2) {4};
+\node[cons] (nr) at (6,2) {};
+\node[cons] (nrl) at (5,1) {};
+\node[numleaf] (nrll) at (4.5,0) {2};
+\node[null] (nrlr) at (5.5,0) {};
+\draw (nrl) to (nrll);
+\draw (nrl) to (nrlr);
+\node[null] (nrr) at (7,1) {};
+\draw (nr) to (nrl);
+\draw (nr) to (nrr);
+\draw (n) to (nl);
+\draw (n) to (nr);
+
+|
+                ))
+
