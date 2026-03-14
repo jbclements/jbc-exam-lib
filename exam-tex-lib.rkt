@@ -27,8 +27,22 @@
          center
          lstlisting
          listings-package-setup
+         tikz-shapes-setup
          tikz-cons-tree
-         tikz-tree)
+         tikz-tree
+         answerbox/wh
+         answerbox
+         quad-answerbox ;; deprecated...
+         )
+
+(define (answerbox/wh w h)
+   @string-append{\begin{tikzpicture}
+\draw (0,0) rectangle (@(~a w),@(~a h));
+\end{tikzpicture}})
+
+(define answerbox (answerbox/wh 2 2))
+(define quad-answerbox (answerbox/wh 5 2))
+
 
 (define doc-element? string?)
 
@@ -398,6 +412,13 @@ Name:  & \rule{200pt}{.1pt} \\[.5cm]
 |
 )
 
+(define tikz-shapes-setup
+  #<<|
+
+\usetikzlibrary{shapes}
+
+|
+  )
 
 ;; drawing binary trees:
 
