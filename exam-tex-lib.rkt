@@ -210,8 +210,20 @@
              strs kwd))
     (sa "\\" kwd "|" (apply sa strs) "|")))
 
+(define (racket . strs)
+  (define alltext (apply string-append strs))
+  (cond [(string-contains? alltext "}")
+         (cond [(string-contains? alltext "|")
+                (error 'rktfmt "string contains both pipes and curlies: ~e"
+                       alltext)]
+               [else
+                (apply piperacket strs)])]
+        [else
+         (apply bracketracket strs)]))
+
 ;; wrap something in a scheme argument
-(define racket (make-wrapper "scheme"))
+;(define racket (make-wrapper "scheme"))
+(define bracketracket (make-wrapper "scheme"))
 (define piperacket (make-pipe-wrapper "scheme"))
 (define emph (make-wrapper "emph"))
 (define bold (make-wrapper "textbf"))
