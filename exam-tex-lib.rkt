@@ -28,6 +28,7 @@
          lstlisting
          listings-package-setup
          tikz-shapes-setup
+         mcq-setup
          tikz-cons-tree
          tikz-tree
          answerbox/wh
@@ -428,6 +429,63 @@ Name:  & \rule{200pt}{.1pt} \\[.5cm]
   #<<|
 
 \usetikzlibrary{shapes}
+
+|
+  )
+
+(define mcq-setup
+  #<<|
+          % code taken from mrychlink/gradescopeexam, many thanks!
+          
+\newcounter{choice}
+
+\newcommand\ovalnode[1]{%
+  \if@"@"correctchoice%
+    \tikz[baseline=(oval.base)]{
+      \node[draw,thick,ellipse,inner ysep=2pt,inner xsep=2pt](oval){\makebox[1em]{#1\vphantom{A}}};
+      \draw[red!80,thick] ($(oval.north west)+(-2pt,-6pt)$) --
+      ($(oval.north west)+(1pt,0pt)$) --
+      ($(oval.south)+(0,0pt)$) --
+      ($(oval.north east)+(2pt,2pt)$) --
+      ($(oval.south)+(0,2pt)$) -- ($(oval.north west)+(1pt,0pt)$) -- cycle;
+    }%
+  \else
+    \tikz[baseline=(oval.base)]{\node[draw,thick,ellipse,inner ysep=2pt,inner xsep=2pt](oval){\makebox[1em]{#1\vphantom{A}}};}%
+  \fi}
+
+\renewcommand\thechoice{\Alph{choice}}
+\newcommand\choicelabel{\ovalnode{\thechoice}}
+
+
+
+ % Added 22 April 2004: Increased the \leftmargin by 2.5em,
+% so the choices will be visibly indented.
+\newenvironment{choices}%
+{\list{\choicelabel}%
+  {\usecounter{choice}\def\makelabel##1{\hss\llap{##1}}%
+    \settowidth{\leftmargin}{W.\hskip\labelsep\hskip 2.5em}%
+    \def\choice{%
+      \if@"@"correctchoice
+        \endgroup
+      \fi
+    \item
+    } % choice
+    \def\CorrectChoice{%
+      \if@"@"correctchoice
+        \endgroup
+      \fi
+      \ifnum\ifprintanswers 1\else\ifprintsolutionkey 1\else 0\fi\fi=1%
+        \begingroup \@"@"correctchoicetrue
+      \fi
+    \item
+    } % CorrectChoice
+    \let\correctchoice\CorrectChoice
+    % \labelwidth\leftmargin\advance\labelwidth-\labelsep
+    % \topsep=0pt
+    % \partopsep=0pt
+  }%
+}%
+{\if@"@"correctchoice \endgroup \fi \endlist}
 
 |
   )
