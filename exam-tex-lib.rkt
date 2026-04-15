@@ -56,7 +56,8 @@
                        #:extra-page boolean?
                        #:title-page-break boolean?
                        #:print-problem-name boolean?
-                       #:pkg-config-strs (listof string?))
+                       #:pkg-config-strs (listof string?)
+                       #:suppress-footer boolean?)
                       
                       boolean?)]
   [instructions-sheet (->* (string? doc-element? path? string?)
@@ -131,7 +132,8 @@
                        #:extra-page [extra-page? #f]
                        #:title-page-break [title-page-break? #t]
                        #:print-problem-name [print-problem-name? #f]
-                       #:pkg-config-strs [package-config-strs '()])
+                       #:pkg-config-strs [package-config-strs '()]
+                       #:suppress-footer [suppress-footer? #f])
   ;; just check to make sure this doesn't signal an error:
   (question-names (filter prob-pair? questions))
   (define target-path (build-path file-path (~a file-stem ".tex")))
@@ -140,12 +142,14 @@
                   (cond [title-page-break? "\n\\newpage\n"]
                         [else ""])
                   (assemble-questions questions print-problem-name?)
+                  (cond [suppress-footer? ""]
+                        [else (string-append
                   "\\hrule"
                   "\\begin{centering}
 
 \\small things below this line might not be graded...
 
-\\end{centering}"
+\\end{centering}")])
                   (if extra-page? (string-append newpage " ~") "")
                   @string-append{\end{document}})
    target-path
