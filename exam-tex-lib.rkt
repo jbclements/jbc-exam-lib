@@ -29,6 +29,7 @@
          listings-package-setup
          tikz-shapes-setup
          mcq-setup
+         multiple-choice
          tikz-cons-tree
          tikz-tree
          answerbox/wh
@@ -274,7 +275,23 @@
    (apply sa "\\item " conts)
    "\n"))
 
+(define (multiple-choice . choices)
+  ((env-thing "choices")
+   (apply
+    string-append
+    (for/list ([choice choices])
+     (sa "\\choice" (verbatim (~a choice)) "\n")))))
 
+#;(module+ test
+  (check-equal? (multiple-choice 3 4 5 "other")
+                "\\begin{choices}
+\\choice 3
+\\choice 4
+\\choice 5
+\\choice other
+\\end{choices}" ))
+
+;; this is older: I now use multiple-choice from tikz?
 
 ;; given a number of columns and a bunch of items,
 ;; format them as enumerated items in the specified number
