@@ -37,6 +37,11 @@
          quad-answerbox ;; deprecated...
          )
 
+(provide/contract [standard-quiz-title (string? string? string? exact-integer? . -> . string?)])
+
+(define (standard-quiz-title coursenum this-term kind nth-num)
+   (format "CSC ~a, ~a, ~a ~a" coursenum this-term kind nth-num))
+
 (define (answerbox/wh w h)
    @string-append{\begin{tikzpicture}
 \draw (0,0) rectangle (@(~a w),@(~a h));
