@@ -654,10 +654,13 @@ Name:  & \rule{200pt}{.1pt} \\[.5cm]
            (add-between
             (for/list ([c children]
                        [i (in-naturals)])
-              (define sub-name (string-append name
-                                              (string
-                                               (integer->char (+ a-char i)))))
-              (format "child {~a}" (tikz-tree-node-render sub-name c)))
+              (cond [(not c)
+                     "child [missing]"]
+                    [else
+                     (define sub-name (string-append name
+                                                     (string
+                                                      (integer->char (+ a-char i)))))
+                     (format "child {~a}" (tikz-tree-node-render sub-name c))]))
             " "))))
 
 (module+ test
